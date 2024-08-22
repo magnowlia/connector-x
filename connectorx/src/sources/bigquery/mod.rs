@@ -22,11 +22,7 @@ use gcp_bigquery_client::{
     Client,
 };
 use sqlparser::dialect::Dialect;
-use std::{
-    io::{Error, ErrorKind},
-    sync::Arc,
-    time::SystemTime,
-};
+use std::{io::ErrorKind, sync::Arc};
 use tokio::runtime::Runtime;
 use url::Url;
 use yup_oauth2::{parse_service_account_key, ServiceAccountKey};
