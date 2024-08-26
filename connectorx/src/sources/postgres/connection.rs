@@ -15,6 +15,10 @@ pub struct TlsConfig {
     pub client_cert: Option<(PathBuf, PathBuf)>,
     /// Location of the root certificate (`sslrootcert`).
     pub root_cert: Option<PathBuf>,
+    /// Inline client cert and key (`sslcert`, `sslkey`).
+    pub client_cert_inline: Option<(String, String)>,
+    /// Inline root certificate (`sslrootcert`).
+    pub root_cert_inline: Option<String>,
 }
 
 impl TryFrom<TlsConfig> for MakeTlsConnector {
@@ -49,8 +53,20 @@ impl TryFrom<TlsConfig> for MakeTlsConnector {
             builder.set_private_key_file(key, SslFiletype::PEM)?;
         }
 
+        if let Some((cert, key)) = tls_config.client_cert_inline {
+            let cert = openssl::x509::X509::from_pem(cert.as_bytes())?;
+            let key = openssl::pkey::PKey::private_key_from_pem(key.as_bytes())?;
+            builder.set_certificate(cert.as_ref())?;
+            builder.set_private_key(key.as_ref())?;
+        }
+
         if let Some(root_cert) = tls_config.root_cert {
             builder.set_ca_file(root_cert)?;
+        }
+
+        if let Some(root_cert) = tls_config.root_cert_inline {
+            let root_cert = openssl::x509::X509::from_pem(root_cert.as_bytes())?;
+            builder.add_extra_chain_cert(root_cert)?;
         }
 
         if !verify_ca {
@@ -76,6 +92,7 @@ fn strip_bad_opts(url: &Url) -> Url {
         .query_pairs()
         .filter(|p| match &*p.0 {
             "sslkey" | "sslcert" | "sslrootcert" => false,
+            "sslkey_inline" | "sslcert_inline" | "sslrootcert_inline" => false,
             _ => true,
         })
         .collect();
@@ -104,11 +121,20 @@ pub fn rewrite_tls_args(
 
     let sslcert = params.get("sslcert").map(PathBuf::from);
     let sslkey = params.get("sslkey").map(PathBuf::from);
-    let root_cert = params.get("sslrootcert").map(PathBuf::from);
     let client_cert = match (sslcert, sslkey) {
         (Some(a), Some(b)) => Some((a, b)),
         _ => None,
     };
+
+    let sslcert_inline = params.get("sslcert_inline");
+    let sslkey_inline = params.get("sslkey_inline");
+    let client_cert_inline = match (sslcert_inline, sslkey_inline) {
+        (Some(a), Some(b)) => Some((a.to_string(), b.to_string())),
+        _ => None,
+    };
+
+    let root_cert = params.get("sslrootcert").map(PathBuf::from);
+    let root_cert_inline = params.get("sslrootcert_inline");
 
     let stripped_url = strip_bad_opts(conn);
     let pg_config: Config = stripped_url.as_str().parse().unwrap();
@@ -117,6 +143,8 @@ pub fn rewrite_tls_args(
         pg_config: pg_config.clone(),
         client_cert,
         root_cert,
+        client_cert_inline,
+        root_cert_inline: root_cert_inline.cloned(),
     };
 
     let tls_connector = match pg_config.get_ssl_mode() {
