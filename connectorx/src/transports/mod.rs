@@ -38,6 +38,8 @@ mod postgres_arrow;
 mod postgres_arrow2;
 #[cfg(all(feature = "src_postgres", feature = "dst_arrow"))]
 mod postgres_arrowstream;
+#[cfg(all(feature = "src_snowflake", feature = "dst_arrow"))]
+mod snowflake_arrow;
 #[cfg(all(feature = "src_sqlite", feature = "dst_arrow"))]
 mod sqlite_arrow;
 #[cfg(all(feature = "src_sqlite", feature = "dst_arrow2"))]
@@ -101,6 +103,8 @@ pub use postgres_arrowstream::{
     PostgresArrowTransport as PostgresArrowStreamTransport,
     PostgresArrowTransportError as PostgresArrowStreamTransportError,
 };
+#[cfg(all(feature = "src_snowflake", feature = "dst_arrow"))]
+pub use snowflake_arrow::{SnowflakeArrowTransport, SnowflakeArrowTransportError};
 #[cfg(all(feature = "src_sqlite", feature = "dst_arrow"))]
 pub use sqlite_arrow::{SQLiteArrowTransport, SQLiteArrowTransportError};
 #[cfg(all(feature = "src_sqlite", feature = "dst_arrow2"))]

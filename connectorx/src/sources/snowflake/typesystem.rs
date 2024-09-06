@@ -1,4 +1,4 @@
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
 #[derive(Copy, Clone, Debug)]
 pub enum SnowflakeTypeSystem {
@@ -9,8 +9,7 @@ pub enum SnowflakeTypeSystem {
     Binary(bool),
     Date(bool),
     Time(bool),
-    Timestamp(bool),
-    TimestampTz(bool),
+    DateTime(bool),
 }
 
 impl_typesystem! {
@@ -22,8 +21,7 @@ impl_typesystem! {
         { Varchar =>  String }
         { Date => NaiveDate }
         { Time => NaiveTime }
-        { Timestamp => NaiveDateTime }
-        { TimestampTz => DateTime<Utc> }
+        { DateTime => NaiveDateTime }
         { Binary => Vec<u8> }
     }
 }
@@ -46,12 +44,12 @@ impl<'a> From<&'a str> for SnowflakeTypeSystem {
             "VARBINARY" => Binary(true),
             "BOOLEAN" => Boolean(true),
             "DATE" => Date(true),
-            "DATETIME" => Timestamp(true),
+            "DATETIME" => DateTime(true),
             "TIME" => Time(true),
-            "TIMESTAMP" => Timestamp(true),
-            "TIMESTAMP_NTZ" => Timestamp(true),
-            "TIMESTAMP_TZ" => TimestampTz(true),
-            "TIMESTAMP_LTZ" => TimestampTz(true),
+            "TIMESTAMP" => DateTime(true),
+            "TIMESTAMP_NTZ" => DateTime(true),
+            "TIMESTAMP_TZ" => DateTime(true),
+            "TIMESTAMP_LTZ" => DateTime(true),
             _ => unimplemented!("{}", format!("{:?}", ty)),
         }
     }
@@ -68,8 +66,7 @@ impl<'a> From<SnowflakeTypeSystem> for &'a str {
             Boolean(_) => "BOOLEAN",
             Date(_) => "DATE",
             Time(_) => "TIME",
-            Timestamp(_) => "TIMESTAMP_NTZ",
-            TimestampTz(_) => "TIMESTAMP_TZ",
+            DateTime(_) => "TIMESTAMP_NTZ",
         }
     }
 }

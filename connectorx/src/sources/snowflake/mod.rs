@@ -11,7 +11,7 @@ use crate::{
     sql::{count_query, limit1_query, CXQuery},
 };
 use anyhow::anyhow;
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use fehler::{throw, throws};
 use serde_json::Value;
 use snowflake_connector_rs::{
@@ -311,7 +311,7 @@ macro_rules! impl_produce {
                 fn produce(&'r mut self) -> $t {
                     let (ridx, cidx) = self.next_loc()?;
                     let row = self.rows.get(ridx).ok_or_else(|| anyhow!("row is none"))?;
-                    let val = row.at(cidx).or_else(|e| Err(anyhow!(e)))?;
+                    let val = row.at(cidx).map_err(|e| anyhow!(e))?;
                     val
                 }
             }
@@ -323,7 +323,7 @@ macro_rules! impl_produce {
                 fn produce(&'r mut self) -> Option<$t> {
                     let (ridx, cidx) = self.next_loc()?;
                     let row = self.rows.get(ridx).ok_or_else(|| anyhow!("row is none"))?;
-                    let val = row.at(cidx).or_else(|e| Err(anyhow!(e)))?;
+                    let val = row.at(cidx).map_err(|e| anyhow!(e))?;
                     val
                 }
             }
@@ -341,4 +341,28 @@ impl_produce!(
     NaiveDateTime,
     NaiveDate,
     Value,
+    String,
 );
+
+impl<'r> Produce<'r, Vec<u8>> for SnowflakeSourceParser {
+    type Error = SnowflakeSourceError;
+
+    fn produce(&'r mut self) -> Result<Vec<u8>, Self::Error> {
+        let (ridx, cidx) = self.next_loc()?;
+        let row = self.rows.get(ridx).ok_or_else(|| anyhow!("row is none"))?;
+        let val: String = row.at(cidx).map_err(|e| anyhow!(e))?;
+        Ok(val.as_bytes().to_vec())
+    }
+}
+
+impl<'r> Produce<'r, Option<Vec<u8>>> for SnowflakeSourceParser {
+    type Error = SnowflakeSourceError;
+
+    fn produce(&'r mut self) -> Result<Option<Vec<u8>>, Self::Error> {
+        let (ridx, cidx) = self.next_loc()?;
+        let row = self.rows.get(ridx).ok_or_else(|| anyhow!("row is none"))?;
+        let val: Option<String> = row.at(cidx).map_err(|e| anyhow!(e))?;
+        let val = val.map(|v| v.as_bytes().to_vec());
+        Ok(val)
+    }
+}
