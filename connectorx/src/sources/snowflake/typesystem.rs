@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 #[derive(Copy, Clone, Debug)]
 pub enum SnowflakeTypeSystem {
@@ -30,9 +30,10 @@ impl<'a> From<&'a str> for SnowflakeTypeSystem {
     fn from(ty: &'a str) -> SnowflakeTypeSystem {
         // https://docs.snowflake.com/en/sql-reference/intro-summary-data-types
         use SnowflakeTypeSystem::*;
-        match ty {
+        match ty.to_uppercase().as_str() {
             "NUMBER" => Number(true),
             "DECIMAL" | "NUMERIC" => Number(true),
+            "FIXED" => Number(true), // not documented in the link above (deprecated?)
             "INT" | "INTEGER" | "BIGINT" | "SMALLINT" | "TINYINT" | "BYTEINT" => Number(true),
             "FLOAT" | "FLOAT4" | "FLOAT8" => Float(true),
             "DOUBLE" | "DOUBLE PRECISION" | "REAL" => Float(true),

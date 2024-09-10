@@ -11,7 +11,7 @@ use crate::{
     sql::{count_query, limit1_query, CXQuery},
 };
 use anyhow::anyhow;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use fehler::{throw, throws};
 use serde_json::Value;
 use snowflake_connector_rs::{
@@ -79,13 +79,13 @@ impl SnowflakeSource {
 
         let username = url.username();
         let password = url.password();
-        let encrypted_pem = query_pairs.get("encrypted_pem");
+        let private_key = query_pairs.get("private_key");
         let passphrase = query_pairs.get("passphrase");
 
-        let auth = match (password, encrypted_pem, passphrase) {
+        let auth = match (password, private_key, passphrase) {
             (Some(password), None, None) => SnowflakeAuthMethod::Password(password.to_string()),
-            (None, Some(encrypted_pem), Some(passphrase)) => SnowflakeAuthMethod::KeyPair {
-                encrypted_pem: encrypted_pem.to_owned(),
+            (None, Some(private_key), Some(passphrase)) => SnowflakeAuthMethod::KeyPair {
+                encrypted_pem: private_key.to_owned(),
                 password: passphrase.as_bytes().to_vec(),
             },
             _ => throw!(anyhow!("invalid auth parameters")),

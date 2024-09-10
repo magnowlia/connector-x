@@ -36,7 +36,7 @@ impl_transport!(
         { Varchar[String]          => LargeUtf8[String]         | conversion auto }
         { Date[NaiveDate]          => Date32[NaiveDate]         | conversion auto }
         { Time[NaiveTime]          => Time64[NaiveTime]         | conversion auto }
-        { DateTime[NaiveDateTime]  => DateTimeTz[NaiveDateTime] | conversion auto }
+        { DateTime[NaiveDateTime]  => Date64[NaiveDateTime]     | conversion auto }
         { Binary[Vec<u8>]          => LargeBinary[Vec<u8>]      | conversion auto }
     }
 );
