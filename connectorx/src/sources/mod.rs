@@ -15,6 +15,8 @@ pub mod mysql;
 pub mod oracle;
 #[cfg(feature = "src_postgres")]
 pub mod postgres;
+#[cfg(feature = "src_snowflake")]
+pub mod snowflake;
 #[cfg(feature = "src_sqlite")]
 pub mod sqlite;
 #[cfg(feature = "src_trino")]

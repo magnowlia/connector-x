@@ -78,6 +78,10 @@ pub enum ConnectorXOutError {
     #[error(transparent)]
     BigQuerySourceError(#[from] crate::sources::bigquery::BigQuerySourceError),
 
+    #[cfg(feature = "src_snowflake")]
+    #[error(transparent)]
+    SnowflakeSourceError(#[from] crate::sources::snowflake::SnowflakeSourceError),
+
     #[cfg(feature = "src_bigquery")]
     #[error(transparent)]
     BigQueryError(#[from] gcp_bigquery_client::error::BQError),
@@ -121,6 +125,10 @@ pub enum ConnectorXOutError {
     #[cfg(all(feature = "src_trino", feature = "dst_arrow"))]
     #[error(transparent)]
     TrinoArrowTransportError(#[from] crate::transports::TrinoArrowTransportError),
+
+    #[cfg(all(feature = "src_snowflake", feature = "dst_arrow"))]
+    #[error(transparent)]
+    SnowflakeArrowTransportError(#[from] crate::transports::SnowflakeArrowTransportError),
 
     /// Any other errors that are too trivial to be put here explicitly.
     #[error(transparent)]
