@@ -60,6 +60,7 @@ j4rs = {version = "0.15", optional = true}
 datafusion = {version = "37.1.0", optional = true}
 prusto = {version = "0.5.1", optional = true}
 serde = {version = "1", optional = true}
+snowflake-connector-rs = {version = "0.6", optional = true}
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -72,7 +73,7 @@ iai = "0.1"
 pprof = {version = "0.5", features = ["flamegraph"]}
 
 [features]
-all = ["src_sqlite", "src_postgres", "src_mysql", "src_mssql", "src_oracle", "src_bigquery", "src_csv", "src_dummy", "src_trino", "dst_arrow", "dst_arrow2", "federation", "fed_exec"]
+all = ["src_sqlite", "src_postgres", "src_mysql", "src_mssql", "src_oracle", "src_bigquery", "src_csv", "src_dummy", "src_trino", "src_snowflake", "dst_arrow", "dst_arrow2", "federation", "fed_exec"]
 branch = []
 default = ["fptr"]
 dst_arrow = ["arrow"]
@@ -99,6 +100,7 @@ src_postgres = [
   "openssl",
   "postgres-openssl",
 ]
+src_snowflake = ["tokio", "snowflake-connector-rs"]
 src_sqlite = ["rusqlite", "r2d2_sqlite", "fallible-streaming-iterator", "r2d2", "urlencoding"]
 src_trino = ["prusto", "uuid", "urlencoding", "rust_decimal", "tokio", "num-traits", "serde"]
 federation = ["j4rs"]
