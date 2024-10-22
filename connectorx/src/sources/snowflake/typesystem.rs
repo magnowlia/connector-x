@@ -31,7 +31,7 @@ impl<'a> From<&'a str> for SnowflakeTypeSystem {
         // https://docs.snowflake.com/en/sql-reference/intro-summary-data-types
         use SnowflakeTypeSystem::*;
         match ty.to_uppercase().as_str() {
-            "NUMBER" => Number(true),
+            "NUMBER" => Float(true),
             "DECIMAL" | "NUMERIC" => Number(true),
             "FIXED" => Number(true), // not documented in the link above (deprecated?)
             "INT" | "INTEGER" | "BIGINT" | "SMALLINT" | "TINYINT" | "BYTEINT" => Number(true),
