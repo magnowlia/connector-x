@@ -3,6 +3,7 @@ use crate::errors::ConnectorXError;
 use crate::sources::oracle::OracleDialect;
 use fehler::{throw, throws};
 use log::{debug, trace, warn};
+use regex::Regex;
 use sqlparser::ast::{
     BinaryOperator, Expr, Function, FunctionArg, FunctionArgExpr, Ident, ObjectName, Query, Select,
     SelectItem, SetExpr, Statement, TableAlias, TableFactor, TableWithJoins, Value,
@@ -279,7 +280,15 @@ pub fn limit1_query<T: Dialect>(sql: &CXQuery<String>, dialect: &T) -> CXQuery<S
         }
         Err(e) => {
             warn!("parser error: {:?}, manually compose query string", e);
-            format!("{} LIMIT 1", sql.as_str())
+
+            // use regex check if the original query ends with a LIMIT clause
+            let re = Regex::new(r"(LIMIT\s+)\d+(\s*)$").unwrap();
+            let query = sql.as_str();
+            if re.is_match(query) {
+                re.replace(query, "$1 1$2").to_string()
+            } else {
+                format!("{} LIMIT 1", query)
+            }
         }
     };
 
