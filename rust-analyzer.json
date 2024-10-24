@@ -1,0 +1,5 @@
+{
+  "rust-analyzer.cargo.features": [
+    "src_snowflake"
+  ]
+}
