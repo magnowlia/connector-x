@@ -11,35 +11,18 @@ use crate::{
     sql::{count_query, limit1_query, CXQuery},
 };
 use anyhow::anyhow;
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime, Utc};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use fehler::{throw, throws};
 use serde_json::Value;
 use snowflake_connector_rs::{
     SnowflakeAuthMethod, SnowflakeClient, SnowflakeClientConfig, SnowflakeRow,
 };
-use sqlparser::dialect::Dialect;
+use sqlparser::dialect::SnowflakeDialect;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::runtime::Runtime;
 use url::Url;
 
 pub use typesystem::SnowflakeTypeSystem;
-
-#[derive(Debug)]
-pub struct SnowflakeDialect {}
-
-impl Dialect for SnowflakeDialect {
-    fn is_delimited_identifier_start(&self, ch: char) -> bool {
-        ch == '`'
-    }
-
-    fn is_identifier_start(&self, ch: char) -> bool {
-        ch.is_ascii_lowercase() || ch.is_ascii_uppercase() || ch == '_' || ch == '-'
-    }
-
-    fn is_identifier_part(&self, ch: char) -> bool {
-        self.is_identifier_start(ch) || ch.is_ascii_digit()
-    }
-}
 
 pub struct SnowflakeSource {
     rt: Arc<Runtime>,
