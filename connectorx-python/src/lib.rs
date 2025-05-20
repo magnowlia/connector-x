@@ -1,5 +1,4 @@
 pub mod arrow;
-pub mod arrow2;
 pub mod constants;
 pub mod cx_read_sql;
 mod errors;
@@ -40,6 +39,7 @@ fn connectorx(_: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
 }
 
 #[pyfunction]
+#[pyo3(signature = (conn, return_type, protocol=None, queries=None, partition_query=None, pre_execution_queries=None))]
 pub fn read_sql<'py>(
     py: Python<'py>,
     conn: &str,
@@ -47,8 +47,17 @@ pub fn read_sql<'py>(
     protocol: Option<&str>,
     queries: Option<Vec<String>>,
     partition_query: Option<cx_read_sql::PyPartitionQuery>,
+    pre_execution_queries: Option<Vec<String>>,
 ) -> PyResult<Bound<'py, PyAny>> {
-    cx_read_sql::read_sql(py, conn, return_type, protocol, queries, partition_query)
+    cx_read_sql::read_sql(
+        py,
+        conn,
+        return_type,
+        protocol,
+        queries,
+        partition_query,
+        pre_execution_queries,
+    )
 }
 
 #[pyfunction]
@@ -64,10 +73,12 @@ pub fn partition_sql(
 }
 
 #[pyfunction]
+#[pyo3(signature = (sql, db_map, strategy=None))]
 pub fn read_sql2<'py>(
     py: Python<'py>,
     sql: &str,
     db_map: HashMap<String, String>,
+    strategy: Option<&str>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let rbs = run(
         sql.to_string(),
@@ -77,6 +88,7 @@ pub fn read_sql2<'py>(
                 .unwrap_or(J4RS_BASE_PATH.to_string())
                 .as_str(),
         ),
+        strategy.unwrap_or("pushdown"),
     )
     .map_err(|e| PyRuntimeError::new_err(format!("{}", e)))?;
     let ptrs = arrow::to_ptrs(rbs);
@@ -85,6 +97,7 @@ pub fn read_sql2<'py>(
 }
 
 #[pyfunction]
+#[pyo3(signature = (conn, query, protocol=None))]
 pub fn get_meta<'py>(
     py: Python<'py>,
     conn: &str,

@@ -82,6 +82,10 @@ pub enum ConnectorXOutError {
     #[error(transparent)]
     BigQueryError(#[from] gcp_bigquery_client::error::BQError),
 
+    #[cfg(feature = "src_trino")]
+    #[error(transparent)]
+    TrinoSourceError(#[from] crate::sources::trino::TrinoSourceError),
+
     #[cfg(feature = "dst_arrow")]
     #[error(transparent)]
     ArrowError(#[from] crate::destinations::arrow::ArrowDestinationError),
@@ -90,57 +94,33 @@ pub enum ConnectorXOutError {
     #[error(transparent)]
     ArrowStreamError(#[from] crate::destinations::arrowstream::ArrowDestinationError),
 
-    #[cfg(feature = "dst_arrow2")]
-    #[error(transparent)]
-    Arrow2Error(#[from] crate::destinations::arrow2::Arrow2DestinationError),
-
     #[cfg(all(feature = "src_postgres", feature = "dst_arrow"))]
     #[error(transparent)]
     PostgresArrowTransportError(#[from] crate::transports::PostgresArrowTransportError),
-
-    #[cfg(all(feature = "src_postgres", feature = "dst_arrow2"))]
-    #[error(transparent)]
-    PostgresArrow2TransportError(#[from] crate::transports::PostgresArrow2TransportError),
 
     #[cfg(all(feature = "src_mysql", feature = "dst_arrow"))]
     #[error(transparent)]
     MySQLArrowTransportError(#[from] crate::transports::MySQLArrowTransportError),
 
-    #[cfg(all(feature = "src_mysql", feature = "dst_arrow2"))]
-    #[error(transparent)]
-    MySQLArrow2TransportError(#[from] crate::transports::MySQLArrow2TransportError),
-
     #[cfg(all(feature = "src_sqlite", feature = "dst_arrow"))]
     #[error(transparent)]
     SQLiteArrowTransportError(#[from] crate::transports::SQLiteArrowTransportError),
-
-    #[cfg(all(feature = "src_sqlite", feature = "dst_arrow2"))]
-    #[error(transparent)]
-    SQLiteArrow2TransportError(#[from] crate::transports::SQLiteArrow2TransportError),
 
     #[cfg(all(feature = "src_mssql", feature = "dst_arrow"))]
     #[error(transparent)]
     MsSQLArrowTransportError(#[from] crate::transports::MsSQLArrowTransportError),
 
-    #[cfg(all(feature = "src_mssql", feature = "dst_arrow2"))]
-    #[error(transparent)]
-    MsSQLArrow2TransportError(#[from] crate::transports::MsSQLArrow2TransportError),
-
     #[cfg(all(feature = "src_oracle", feature = "dst_arrow"))]
     #[error(transparent)]
     OracleArrowTransportError(#[from] crate::transports::OracleArrowTransportError),
-
-    #[cfg(all(feature = "src_oracle", feature = "dst_arrow2"))]
-    #[error(transparent)]
-    OracleArrow2TransportError(#[from] crate::transports::OracleArrow2TransportError),
 
     #[cfg(all(feature = "src_bigquery", feature = "dst_arrow"))]
     #[error(transparent)]
     BigqueryArrowTransportError(#[from] crate::transports::BigQueryArrowTransportError),
 
-    #[cfg(all(feature = "src_bigquery", feature = "dst_arrow2"))]
+    #[cfg(all(feature = "src_trino", feature = "dst_arrow"))]
     #[error(transparent)]
-    BigqueryArrow2TransportError(#[from] crate::transports::BigQueryArrow2TransportError),
+    TrinoArrowTransportError(#[from] crate::transports::TrinoArrowTransportError),
 
     /// Any other errors that are too trivial to be put here explicitly.
     #[error(transparent)]

@@ -71,6 +71,7 @@ pub unsafe extern "C" fn free_plans(res: *const CXSlice<CXFederatedPlan>) {
 pub unsafe extern "C" fn connectorx_rewrite(
     conn_list: *const CXSlice<CXConnectionInfo>,
     query: *const c_char,
+    strategy: *const c_char,
 ) -> CXSlice<CXFederatedPlan> {
     let mut db_map = HashMap::new();
     let conn_slice = unsafe { std::slice::from_raw_parts((*conn_list).ptr, (*conn_list).len) };
@@ -117,16 +118,18 @@ pub unsafe extern "C" fn connectorx_rewrite(
     }
 
     let query_str = unsafe { CStr::from_ptr(query) }.to_str().unwrap();
+    let strategy_str = unsafe { CStr::from_ptr(strategy) }.to_str().unwrap();
     let j4rs_base = match env::var("CX_LIB_PATH") {
         Ok(val) => Some(val),
         Err(_) => None,
     };
     // println!("j4rs_base: {:?}", j4rs_base);
-    let fed_plan: Vec<CXFederatedPlan> = rewrite_sql(query_str, &db_map, j4rs_base.as_deref())
-        .unwrap()
-        .into_iter()
-        .map(|p| p.into())
-        .collect();
+    let fed_plan: Vec<CXFederatedPlan> =
+        rewrite_sql(query_str, &db_map, j4rs_base.as_deref(), strategy_str)
+            .unwrap()
+            .into_iter()
+            .map(|p| p.into())
+            .collect();
 
     CXSlice::<_>::new_from_vec(fed_plan)
 }
@@ -173,7 +176,7 @@ pub unsafe extern "C" fn connectorx_scan(conn: *const c_char, query: *const c_ch
     let conn_str = unsafe { CStr::from_ptr(conn) }.to_str().unwrap();
     let query_str = unsafe { CStr::from_ptr(query) }.to_str().unwrap();
     let source_conn = SourceConn::try_from(conn_str).unwrap();
-    let record_batches = get_arrow(&source_conn, None, &[CXQuery::from(query_str)])
+    let record_batches = get_arrow(&source_conn, None, &[CXQuery::from(query_str)], None)
         .unwrap()
         .arrow()
         .unwrap();
@@ -278,7 +281,7 @@ pub unsafe extern "C" fn connectorx_scan_iter(
     }
 
     let arrow_iter: Box<dyn RecordBatchIterator> =
-        new_record_batch_iter(&source_conn, None, query_vec.as_slice(), batch_size);
+        new_record_batch_iter(&source_conn, None, query_vec.as_slice(), batch_size, None);
 
     Box::into_raw(Box::new(arrow_iter))
 }

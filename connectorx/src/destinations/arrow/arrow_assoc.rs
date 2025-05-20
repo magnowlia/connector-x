@@ -4,10 +4,10 @@ use super::{
 };
 use crate::constants::SECONDS_IN_DAY;
 use arrow::array::{
-    ArrayBuilder, BooleanBuilder, Date32Builder, Float32Builder, Float64Builder, Int32Builder,
-    Int64Builder, LargeBinaryBuilder, StringBuilder, Time64MicrosecondBuilder,
-    Time64NanosecondBuilder, TimestampMicrosecondBuilder, TimestampNanosecondBuilder,
-    UInt32Builder, UInt64Builder,
+    ArrayBuilder, BooleanBuilder, Date32Builder, Float32Builder, Float64Builder, Int16Builder,
+    Int32Builder, Int64Builder, LargeBinaryBuilder, LargeListBuilder, StringBuilder,
+    Time64MicrosecondBuilder, Time64NanosecondBuilder, TimestampMicrosecondBuilder,
+    TimestampNanosecondBuilder, UInt16Builder, UInt32Builder, UInt64Builder,
 };
 use arrow::datatypes::Field;
 use arrow::datatypes::{DataType as ArrowDataType, TimeUnit};
@@ -61,8 +61,10 @@ macro_rules! impl_arrow_assoc {
     };
 }
 
+impl_arrow_assoc!(u16, ArrowDataType::UInt16, UInt16Builder);
 impl_arrow_assoc!(u32, ArrowDataType::UInt32, UInt32Builder);
 impl_arrow_assoc!(u64, ArrowDataType::UInt64, UInt64Builder);
+impl_arrow_assoc!(i16, ArrowDataType::Int16, Int16Builder);
 impl_arrow_assoc!(i32, ArrowDataType::Int32, Int32Builder);
 impl_arrow_assoc!(i64, ArrowDataType::Int64, Int64Builder);
 impl_arrow_assoc!(f32, ArrowDataType::Float32, Float32Builder);
@@ -196,7 +198,7 @@ impl ArrowAssoc for DateTimeWrapperMicro {
     type Builder = TimestampMicrosecondBuilder;
 
     fn builder(nrows: usize) -> Self::Builder {
-        TimestampMicrosecondBuilder::with_capacity(nrows).with_timezone("UTC")
+        TimestampMicrosecondBuilder::with_capacity(nrows).with_timezone("+00:00")
     }
 
     #[throws(ArrowDestinationError)]
@@ -207,7 +209,7 @@ impl ArrowAssoc for DateTimeWrapperMicro {
     fn field(header: &str) -> Field {
         Field::new(
             header,
-            ArrowDataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+            ArrowDataType::Timestamp(TimeUnit::Microsecond, Some("+00:00".into())),
             false,
         )
     }
@@ -217,7 +219,7 @@ impl ArrowAssoc for Option<DateTimeWrapperMicro> {
     type Builder = TimestampMicrosecondBuilder;
 
     fn builder(nrows: usize) -> Self::Builder {
-        TimestampMicrosecondBuilder::with_capacity(nrows).with_timezone("UTC")
+        TimestampMicrosecondBuilder::with_capacity(nrows).with_timezone("+00:00")
     }
 
     #[throws(ArrowDestinationError)]
@@ -228,7 +230,7 @@ impl ArrowAssoc for Option<DateTimeWrapperMicro> {
     fn field(header: &str) -> Field {
         Field::new(
             header,
-            ArrowDataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+            ArrowDataType::Timestamp(TimeUnit::Microsecond, Some("+00:00".into())),
             true,
         )
     }
@@ -483,3 +485,60 @@ impl ArrowAssoc for Vec<u8> {
         Field::new(header, ArrowDataType::LargeBinary, false)
     }
 }
+
+macro_rules! impl_arrow_array_assoc {
+    ($T:ty, $AT:expr, $B:ident) => {
+        impl ArrowAssoc for $T {
+            type Builder = LargeListBuilder<$B>;
+
+            fn builder(nrows: usize) -> Self::Builder {
+                LargeListBuilder::with_capacity($B::new(), nrows)
+            }
+
+            #[throws(ArrowDestinationError)]
+            fn append(builder: &mut Self::Builder, value: Self) {
+                builder.append_value(value);
+            }
+
+            fn field(header: &str) -> Field {
+                Field::new(
+                    header,
+                    ArrowDataType::LargeList(std::sync::Arc::new(Field::new_list_field($AT, true))),
+                    false,
+                )
+            }
+        }
+
+        impl ArrowAssoc for Option<$T> {
+            type Builder = LargeListBuilder<$B>;
+
+            fn builder(nrows: usize) -> Self::Builder {
+                LargeListBuilder::with_capacity($B::new(), nrows)
+            }
+
+            #[throws(ArrowDestinationError)]
+            fn append(builder: &mut Self::Builder, value: Self) {
+                builder.append_option(value);
+            }
+
+            fn field(header: &str) -> Field {
+                Field::new(
+                    header,
+                    ArrowDataType::LargeList(std::sync::Arc::new(Field::new_list_field($AT, true))),
+                    true,
+                )
+            }
+        }
+    };
+}
+
+impl_arrow_array_assoc!(Vec<Option<bool>>, ArrowDataType::Boolean, BooleanBuilder);
+impl_arrow_array_assoc!(Vec<Option<String>>, ArrowDataType::Utf8, StringBuilder);
+impl_arrow_array_assoc!(Vec<Option<i16>>, ArrowDataType::Int16, Int16Builder);
+impl_arrow_array_assoc!(Vec<Option<i32>>, ArrowDataType::Int32, Int32Builder);
+impl_arrow_array_assoc!(Vec<Option<i64>>, ArrowDataType::Int64, Int64Builder);
+impl_arrow_array_assoc!(Vec<Option<u16>>, ArrowDataType::UInt16, UInt16Builder);
+impl_arrow_array_assoc!(Vec<Option<u32>>, ArrowDataType::UInt32, UInt32Builder);
+impl_arrow_array_assoc!(Vec<Option<u64>>, ArrowDataType::UInt64, UInt64Builder);
+impl_arrow_array_assoc!(Vec<Option<f32>>, ArrowDataType::Float32, Float32Builder);
+impl_arrow_array_assoc!(Vec<Option<f64>>, ArrowDataType::Float64, Float64Builder);

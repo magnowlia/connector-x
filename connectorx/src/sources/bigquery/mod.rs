@@ -17,6 +17,7 @@ use gcp_bigquery_client::{
     model::{
         get_query_results_parameters::GetQueryResultsParameters,
         get_query_results_response::GetQueryResultsResponse, query_request::QueryRequest,
+        query_response::ResultSet,
     },
     Client,
 };
@@ -155,7 +156,6 @@ where
                 QueryRequest::new(l1query.as_str()),
             ))?;
             let (names, types) = rs
-                .query_response()
                 .schema
                 .as_ref()
                 .ok_or_else(|| anyhow!("TableSchema is none"))?
@@ -182,9 +182,9 @@ where
                 let cxq = CXQuery::Naked(q.clone());
                 let cquery = count_query(&cxq, &BigQueryDialect {})?;
                 let job = self.client.job();
-                let mut rs = self.rt.block_on(
+                let mut rs = ResultSet::new_from_query_response(self.rt.block_on(
                     job.query(self.project_id.as_str(), QueryRequest::new(cquery.as_str())),
-                )?;
+                )?);
                 rs.next_row();
                 let nrows = rs
                     .get_i64(0)?
@@ -258,9 +258,10 @@ impl SourcePartition for BigQuerySourcePartition {
     fn result_rows(&mut self) {
         let cquery = count_query(&self.query, &BigQueryDialect {})?;
         let job = self.client.job();
-        let mut rs = self
-            .rt
-            .block_on(job.query(self.project_id.as_str(), QueryRequest::new(cquery.as_str())))?;
+        let mut rs =
+            ResultSet::new_from_query_response(self.rt.block_on(
+                job.query(self.project_id.as_str(), QueryRequest::new(cquery.as_str())),
+            )?);
         rs.next_row();
         let nrows = rs
             .get_i64(0)?
@@ -276,7 +277,6 @@ impl SourcePartition for BigQuerySourcePartition {
             QueryRequest::new(self.query.as_str()),
         ))?;
         let job_info = qry
-            .query_response()
             .job_reference
             .as_ref()
             .ok_or_else(|| anyhow!("job_reference is none"))?;

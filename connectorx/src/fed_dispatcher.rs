@@ -14,6 +14,7 @@ pub fn run(
     sql: String,
     db_map: HashMap<String, String>,
     j4rs_base: Option<&str>,
+    strategy: &str,
 ) -> Vec<RecordBatch> {
     debug!("federated input sql: {}", sql);
     let mut db_conn_map: HashMap<String, FederatedDataSourceInfo> = HashMap::new();
@@ -28,7 +29,7 @@ pub fn run(
             ),
         );
     }
-    let fed_plan = rewrite_sql(sql.as_str(), &db_conn_map, j4rs_base)?;
+    let fed_plan = rewrite_sql(sql.as_str(), &db_conn_map, j4rs_base, strategy)?;
 
     debug!("fetch queries from remote");
     let (sender, receiver) = channel();
@@ -50,7 +51,7 @@ pub fn run(
                         .as_ref()
                         .unwrap();
 
-                    let destination = get_arrow(source_conn, None, queries.as_slice())?;
+                    let destination = get_arrow(source_conn, None, queries.as_slice(), None)?;
                     let rbs = destination.arrow()?;
 
                     let provider = MemTable::try_new(rbs[0].schema(), vec![rbs])?;

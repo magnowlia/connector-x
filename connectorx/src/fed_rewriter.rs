@@ -83,13 +83,14 @@ fn create_sources(
     jvm: &Jvm,
     db_map: &HashMap<String, FederatedDataSourceInfo>,
 ) -> (Instance, Instance) {
+    debug!("Could not find environment variable `FED_CONFIG_PATH`, use manual configuration (c++ API only)!");
     let mut db_config = vec![];
-    let db_manual = jvm.create_instance("java.util.HashMap", &[])?;
+    let db_manual = jvm.create_instance("java.util.HashMap", InvocationArg::empty())?;
 
     for (db_name, db_info) in db_map.iter() {
         if db_info.manual_info.is_some() {
             let manual_info = db_info.manual_info.as_ref().unwrap();
-            let schema_info = jvm.create_instance("java.util.HashMap", &[])?;
+            let schema_info = jvm.create_instance("java.util.HashMap", InvocationArg::empty())?;
             for (name, columns) in manual_info {
                 let arr_instance = jvm.java_list("java.lang.String", columns.to_vec())?;
                 jvm.invoke(
@@ -126,12 +127,17 @@ fn create_sources(
 
 #[allow(dead_code)]
 #[throws(ConnectorXOutError)]
-fn create_sources2(jvm: &Jvm, db_map: &HashMap<String, FederatedDataSourceInfo>) -> Instance {
+fn create_sources2(
+    jvm: &Jvm,
+    db_map: &HashMap<String, FederatedDataSourceInfo>,
+) -> (Instance, Instance) {
+    debug!("Found environment variable `FED_CONFIG_PATH`, use configurations!");
     let mut dbs = vec![];
+    let db_manual = jvm.create_instance("java.util.HashMap", InvocationArg::empty())?;
     for db in db_map.keys() {
         dbs.push(String::from(db));
     }
-    jvm.java_list("java.lang.String", dbs)?
+    (jvm.java_list("java.lang.String", dbs)?, db_manual)
 }
 
 #[throws(ConnectorXOutError)]
@@ -139,18 +145,27 @@ pub fn rewrite_sql(
     sql: &str,
     db_map: &HashMap<String, FederatedDataSourceInfo>,
     j4rs_base: Option<&str>,
+    strategy: &str,
 ) -> Vec<Plan> {
     let jvm = init_jvm(j4rs_base)?;
     debug!("init jvm successfully!");
 
     let sql = InvocationArg::try_from(sql).unwrap();
-    let (db_config, db_manual) = create_sources(&jvm, db_map)?;
-    let rewriter = jvm.create_instance("ai.dataprep.federated.FederatedQueryRewriter", &[])?;
+    let strategy = InvocationArg::try_from(strategy).unwrap();
+
+    let (db_config, db_manual) = match env::var("FED_CONFIG_PATH") {
+        Ok(_) => create_sources2(&jvm, db_map)?,
+        _ => create_sources(&jvm, db_map)?,
+    };
+    let rewriter = jvm.create_instance(
+        "ai.dataprep.accio.FederatedQueryRewriter",
+        InvocationArg::empty(),
+    )?;
     let db_config = InvocationArg::try_from(db_config).unwrap();
     let db_manual = InvocationArg::try_from(db_manual).unwrap();
-    let plan = jvm.invoke(&rewriter, "rewrite3", &[sql, db_config, db_manual])?;
+    let plan = jvm.invoke(&rewriter, "rewrite", &[sql, db_config, db_manual, strategy])?;
 
-    let count = jvm.invoke(&plan, "getCount", &[])?;
+    let count = jvm.invoke(&plan, "getCount", InvocationArg::empty())?;
     let count: i32 = jvm.to_rust(count)?;
     debug!("rewrite finished, got {} queries", count);
 
