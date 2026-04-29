@@ -13,12 +13,13 @@ use crate::{
 use anyhow::anyhow;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use fehler::{throw, throws};
+use percent_encoding::percent_decode_str;
 use serde_json::Value;
 use snowflake_connector_rs::{
     SnowflakeAuthMethod, SnowflakeClient, SnowflakeClientConfig, SnowflakeRow,
 };
 use sqlparser::dialect::SnowflakeDialect;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{borrow::Cow, collections::HashMap, sync::Arc, time::Duration};
 use tokio::runtime::Runtime;
 use url::Url;
 
@@ -60,12 +61,19 @@ impl SnowflakeSource {
             timeout,
         };
 
-        let username = url.username();
-        let password = url.password();
+        // Percent-decode the username — `url.username()` returns the encoded form
+        // (e.g. "first.last%40example.com" for an email-style Snowflake login),
+        // and SnowflakeClient signs JWT subjects from the username verbatim, so
+        // forwarding the encoded form makes Snowflake reject with
+        // `JWT token is invalid`. Likewise for the password.
+        let username: Cow<str> = percent_decode_str(url.username()).decode_utf8_lossy();
+        let password: Option<Cow<str>> = url
+            .password()
+            .map(|p| percent_decode_str(p).decode_utf8_lossy());
         let private_key = query_pairs.get("private_key");
         let passphrase = query_pairs.get("passphrase");
 
-        let auth = match (password, private_key, passphrase) {
+        let auth = match (password.as_deref(), private_key, passphrase) {
             (Some(password), None, None) => SnowflakeAuthMethod::Password(password.to_string()),
             (None, Some(private_key), Some(passphrase)) => SnowflakeAuthMethod::KeyPair {
                 encrypted_pem: private_key.to_owned(),
@@ -74,7 +82,7 @@ impl SnowflakeSource {
             _ => throw!(anyhow!("invalid auth parameters")),
         };
 
-        let client = Arc::new(SnowflakeClient::new(username, auth, client_config)?);
+        let client = Arc::new(SnowflakeClient::new(&username, auth, client_config)?);
 
         Self {
             rt,
