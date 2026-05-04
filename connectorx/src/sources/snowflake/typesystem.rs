@@ -31,9 +31,15 @@ impl<'a> From<&'a str> for SnowflakeTypeSystem {
         // https://docs.snowflake.com/en/sql-reference/intro-summary-data-types
         use SnowflakeTypeSystem::*;
         match ty.to_uppercase().as_str() {
-            "NUMBER" => Float(true),
-            "DECIMAL" | "NUMERIC" => Number(true),
-            "FIXED" => Number(true), // not documented in the link above (deprecated?)
+            // FIXED is what Snowflake's REST API actually returns for the NUMBER /
+            // DECIMAL / NUMERIC family (not deprecated — the comment used to say
+            // so, but it's the live name). AVG / SUM-of-int / DATEDIFF results
+            // arrive as FIXED with scale > 0 and string values like "83.269863";
+            // mapping FIXED to i64 made the decoder reject them. Match the
+            // existing NUMBER -> Float treatment for the whole scale-aware family.
+            // INT/INTEGER/BIGINT/etc. stay as i64 — those are user-declared
+            // integer types where preserving int precision matters.
+            "NUMBER" | "DECIMAL" | "NUMERIC" | "FIXED" => Float(true),
             "INT" | "INTEGER" | "BIGINT" | "SMALLINT" | "TINYINT" | "BYTEINT" => Number(true),
             "FLOAT" | "FLOAT4" | "FLOAT8" => Float(true),
             "DOUBLE" | "DOUBLE PRECISION" | "REAL" => Float(true),
