@@ -49,6 +49,7 @@ macro_rules! impl_postgres_transport {
                 { Int8[i64]                  => Int64[i64]                | conversion auto }
                 { Bool[bool]                 => Boolean[bool]             | conversion auto  }
                 { Text[&'r str]              => LargeUtf8[String]         | conversion owned }
+                { Enum[&'r str]              => LargeUtf8[String]         | conversion none }
                 { BpChar[&'r str]            => LargeUtf8[String]         | conversion none }
                 { VarChar[&'r str]           => LargeUtf8[String]         | conversion none }
                 { Name[&'r str]              => LargeUtf8[String]         | conversion none }
